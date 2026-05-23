@@ -286,6 +286,17 @@ function extractLessonMarkers(text, chatId) {
   return { cleaned: cleaned.trim(), count };
 }
 
+// [KB_SAVE: judul | isi] → simpan ke knowledge base perusahaan, hapus marker.
+function extractKbMarkers(text, senderJid, chatId) {
+  if (!text) return { cleaned: text, count: 0 };
+  let count = 0;
+  const cleaned = text.replace(/\[KB_SAVE:\s*([^\]|]+?)\s*\|\s*([\s\S]+?)\]/g, (m, title, body) => {
+    try { if (knowledge.importFromText({ text: body.trim(), title: title.trim(), ownerJid: senderJid, chatId })) count++; } catch {}
+    return "";
+  });
+  return { cleaned: cleaned.trim(), count };
+}
+
 // [SKILL_SAVE: nama | kapan dipakai | isi prosedur] → simpan skill, hapus marker.
 function extractSkillMarkers(text, chatId) {
   if (!text) return { cleaned: text, names: [] };
@@ -372,7 +383,7 @@ const BOT_LOCAL_COMMANDS = new Set([
   "/event", "/events", "/ics", "/cal",
   "/ui-lang", "/uilang", "/version", "/update-check",
   "/lessons", "/lesson-del", "/skills", "/skill", "/skill-del", "/voice",
-  "/facts", "/fact-del", "/lokasi", "/alias", "/senders", "/who", "/habits"
+  "/facts", "/fact-del", "/lokasi", "/alias", "/senders", "/who", "/habits", "/kb"
 ]);
 
 async function handleCommand(chatId, senderJid, text, isGroup, msg) {
@@ -397,12 +408,13 @@ async function handleCommand(chatId, senderJid, text, isGroup, msg) {
         admin: `👑 *ADMIN (boss)*\n/boss-add <nomor> • /boss-remove • /list-bosses\n/list-chats — semua chat\n/dm-on|off — bot balas DM\n/listen-on|off — bot dengar group ini\n/users • /userprofile — profil user\n/persona — ganti gaya bot\n/version • /update-check — cek update`,
         button: `🔘 *PILIHAN & PREFERENSI*\n/pilih <n> atau /pick <n> — pilih opsi tombol\n/remembered — preferensi tersimpan\n/forget <pattern> — hapus preferensi`,
         learn: `🧠 *BELAJAR & SKILL*\nBot belajar otomatis dari: (1) koreksi lo, (2) tanya-jawab orang di grup.\n/lessons — pelajaran dari koreksi lo\n/lesson-del <id> — hapus (boss)\n/facts — fakta dari obrolan grup (status + alasan)\n/fact-del <id> — hapus fakta (boss)\n/skills — daftar skill\n/skill <nama> — detail skill\n/skill-del <nama> — hapus skill (boss)`,
+        company: `🏢 *OTAK PERUSAHAAN (onboarding)*\nBot tau soal perusahaan, grup, divisi, jobdesc, SOP — orang baru tinggal tanya, gak perlu diajarin manual.\n/kb — liat knowledge base\n/kb add <judul> = <isi> — ajarin fakta (boss)\n/import file — masukin SOP/handbook (reply dokumen)\nAtau ngomong ke bot: "catat: bagian gudang tugasnya..." → bot inget.\nTanya: "saya bagian X kerjaannya apa?", "grup ini buat apa?", "SOP kirim barang gimana?"`,
         voice: `🔊 *VOICE / TTS*\nBot bisa bales pakai voice note (suara natural Supertonic).\n/voice on — semua balasan + voice note (tetap ada teks)\n/voice off — teks aja\n_Kirim voice → bot auto-bales voice juga (mirror), walau mode off._\nSetup model sekali: \`node tts/supertonic/download-model.mjs\``,
         lokasi: `📍 *SHARE LOKASI*\nOrang share lokasi → bot inget. Tanya "kep X dimana / posisi kep X" → bot *forward* pesan lokasi kep itu ke penanya (bukan dihitung).\n/lokasi <nama> — kirim/forward lokasi terakhir orang itu\n/senders — liat akun WA pengirim\n/alias "julukan" = <nomor/nama> — map julukan ke akun (mis kep Agus)\n/alias list • /alias del <julukan>`
       };
       const t = HELP_TOPICS[topic];
       if (t) return sendText(chatId, t, msg);
-      return sendText(chatId, `❓ Topik "${topic}" gak ada.\nTopik: session, setup, rag, file, lang, budget, auto, admin, button, learn, voice, lokasi`, msg);
+      return sendText(chatId, `❓ Topik "${topic}" gak ada.\nTopik: session, setup, rag, file, lang, budget, auto, admin, button, company, learn, voice, lokasi`, msg);
     }
     return sendText(chatId,
       `🤖 *Claude Code di WhatsApp*\n\n` +
@@ -419,6 +431,7 @@ async function handleCommand(chatId, senderJid, text, isGroup, msg) {
       `• \`/help auto\` — remind, cron, workflow, kalender\n` +
       `• \`/help admin\` — boss, persona, listen\n` +
       `• \`/help button\` — pilihan & preferensi\n` +
+      `• \`/help company\` — otak perusahaan / onboarding\n` +
       `• \`/help learn\` — belajar dari koreksi + skills\n` +
       `• \`/help voice\` — voice note / TTS\n` +
       `• \`/help lokasi\` — share lokasi & peta titik\n` +
@@ -1068,6 +1081,29 @@ async function handleCommand(chatId, senderJid, text, isGroup, msg) {
     return sendText(chatId, `📋 *${n} pesan terakhir:*\n\n${msgs.map(m => `• *${m.sender_name || "?"}*: ${(m.text || "(media)").slice(0, 80)}`).join("\n")}`, msg);
   }
 
+  if (cmd === "/kb") {
+    const sub = (parts[1] || "").toLowerCase();
+    if (sub === "add" || argText.includes("=")) {
+      if (!boss) return sendText(chatId, "❌ Boss only.", msg);
+      const body = argText.replace(/^add\s+/i, "");
+      const eq = body.indexOf("=");
+      if (eq < 0) return sendText(chatId, 'Format: /kb add <judul> = <isi>\nContoh: /kb add Bagian Gudang = Tugas: terima barang, catat stok, cek kondisi.\nAtau /import file (reply dokumen) buat masukin SOP/handbook.', msg);
+      const title = body.slice(0, eq).trim();
+      const isi = body.slice(eq + 1).trim();
+      const r = knowledge.importFromText({ text: isi, title, ownerJid: senderJid, chatId });
+      return sendText(chatId, r ? `✅ KB: *${title}* tersimpan. Orang tinggal tanya, bot jawab dari sini.` : "❌ Gagal.", msg);
+    }
+    if (sub === "del") {
+      if (!boss) return sendText(chatId, "❌ Boss only.", msg);
+      const id = parseInt(argText.replace(/^del\s+/i, ""), 10);
+      return sendText(chatId, knowledge.deleteImport(id) ? `🗑️ KB #${id} dihapus.` : `❌ #${id} gak ada.`, msg);
+    }
+    const list = knowledge.listImports(40);
+    if (!list.length) return sendText(chatId, "🏢 KB perusahaan kosong.\nIsi: /kb add <judul> = <isi> · atau /import file (SOP/handbook) · atau ngomong ke bot \"catat: ...\".\nHabis itu siapa aja bisa tanya, bot jawab.", msg);
+    const lines = list.map(k => `*#${k.id}* ${k.title} _(${k.source_type})_`);
+    return sendText(chatId, `🏢 *KNOWLEDGE BASE PERUSAHAAN (${list.length})*\n\n${lines.join("\n")}\n\n_Tambah: /kb add <judul> = <isi> · Dokumen: /import file · Hapus: /kb del <id>_`, msg);
+  }
+
   if (cmd === "/lessons") {
     const list = learning.listLessons(chatId, 30);
     if (!list.length) return sendText(chatId, "📚 Belum ada pelajaran. Bot belajar otomatis tiap lo koreksi (mis \"lain kali cari data X di Y\").", msg);
@@ -1264,7 +1300,9 @@ async function processUserMessage(chatId, userText, quotedMsg, isGroup, senderJi
 
   const { cleaned: afterLesson, count: lessonCount } = extractLessonMarkers(afterLoc, chatId);
   if (lessonCount) console.log(`[LESSON] saved ${lessonCount} from ${chatId}`);
-  const { cleaned: afterSkill, names: skillNames } = extractSkillMarkers(afterLesson, chatId);
+  const { cleaned: afterKb, count: kbCount } = extractKbMarkers(afterLesson, senderJid, chatId);
+  if (kbCount) console.log(`[KB] saved ${kbCount} company-knowledge entries`);
+  const { cleaned: afterSkill, names: skillNames } = extractSkillMarkers(afterKb, chatId);
   if (skillNames.length) console.log(`[SKILL] saved: ${skillNames.join(", ")}`);
 
   const { cleaned: afterRemember, pattern: rememberPat } = buttonsMod.extractRememberPattern(afterSkill);

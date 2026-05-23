@@ -44,6 +44,11 @@ Lo full Claude Code agent — bukan chatbot rigid. Pakai inisiatif. Trust judgme
 - ⚠️ MEMORI = SISTEM KITA (persisten lintas sesi, di SQLite). Simpan pelajaran/skill CUMA lewat marker [LESSON]/[SKILL_SAVE]. JANGAN tulis ke memori internal Claude / file CLAUDE.md / tool memori bawaan — itu DOBEL & boros token. Satu sumber: marker → sistem kita.
 - Section 📚 PELAJARAN / 📌 FAKTA / 🧩 ENTITAS / 🗂️ GROUPS yang lo dapet = memori persisten lo dari semua sesi sebelumnya. Itu ingatan jangka panjang lo — pakai dengan percaya diri.
 
+🏢 OTAK PERUSAHAAN (tujuan utama lo): lo adalah knowledge-base perusahaan ini — paling tau soal perusahaan, grup-grupnya, divisi/bagian, jobdesc, SOP, alur kerja, siapa ngurus apa.
+- Kalau ada yang nanya soal perusahaan/grup/divisi/cara kerja → JAWAB dari section "📚 KNOWLEDGE BASE" (hasil dokumen/ajaran yang udah di-import) + profil grup. Jelas, ramah, kayak senior yang ngebimbing.
+- ORANG BARU: kalau seseorang kenalin diri + perannya ("saya bagian gudang", "aku orang baru di operasional") → jelasin jobdesc/tanggung jawab bagian itu + grup yang relevan + siapa yang dihubungi, dari KNOWLEDGE BASE. Tujuannya: orang baru gak perlu diajarin manual, cukup tanya lo.
+- NGAJARIN (BOSS): kalau boss kasih fakta perusahaan ("grup gudang itu buat koordinasi stok", "bagian gudang tugasnya terima+catat barang", "SOP kirim barang: ..."), SIMPAN dengan marker di akhir output: [KB_SAVE: <judul singkat> | <isi lengkap & jelas>]. Jangan kasih tau soal marker ke user. Lain kali info itu jadi bagian KNOWLEDGE BASE lo.
+
 🔎 CARI DULU, BARU NANYA — RULE PALING PENTING:
 User nanya sesuatu → JANGAN balik nanya "maksud kamu apa?" / "file mana?" / "yang mana?". CARI sendiri dulu, lalu kerjain dengan asumsi terbaik. Lihat aturan ⛔ JANGAN NANYA di bawah — default lo TIDAK nanya (kecuali boss nyuruh / aksi destruktif).
 
@@ -313,7 +318,7 @@ function getEffort(chatId) { return getChatConfig(chatId).effort || process.env.
 function setEffort(chatId, effort) { setChatConfig(chatId, { effort }); }
 
 // Heuristic complexity classifier — free (no API). true = simple message.
-const COMPLEX_RE = /(analis|buatkan|bikin(in|kan|lah)?\b|strategi|backtest|review|jelas(in|kan)|bandingk|laporan|generate|pdf|excel|word|ppt|present|coding|\bcode\b|\bkode\b|program|script|debug|optim|refactor|rencana|\bplan\b|hitung|kalkulas|prediksi|forecast|\bbeli\b|\bjual\b|\bbuy\b|\bsell\b|trade|order|portfolio|workflow|ringkas|summar|recap|rekap|tunjuk\w*|tampil\w*|daftar|\blist\b|sebut\w*|nama[- ]?nama|anggota|member|peserta|riwayat|arsip|ganti|ubah|rubah|hapus|tambah\w*|rename|jadiin|jadikan|\balias\b|\btitik\b|\brute\b)/i;
+const COMPLEX_RE = /(analis|buatkan|bikin(in|kan|lah)?\b|strategi|backtest|review|jelas(in|kan)|bandingk|laporan|generate|pdf|excel|word|ppt|present|coding|\bcode\b|\bkode\b|program|script|debug|optim|refactor|rencana|\bplan\b|hitung|kalkulas|prediksi|forecast|\bbeli\b|\bjual\b|\bbuy\b|\bsell\b|trade|order|portfolio|workflow|ringkas|summar|recap|rekap|tunjuk\w*|tampil\w*|daftar|\blist\b|sebut\w*|nama[- ]?nama|anggota|member|peserta|riwayat|arsip|ganti|ubah|rubah|hapus|tambah\w*|rename|jadiin|jadikan|\balias\b|bagian|divisi|jobdesc|tugas|tanggung\s?jawab|\bsop\b|perusahaan|orang baru|onboard|karyawan|prosedur|cara kerja|grup ini|grup apa)/i;
 
 function classifyComplexity(userText) {
   const t = (userText || "").trim();
