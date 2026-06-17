@@ -12,6 +12,7 @@
   <a href="https://ghanibot.github.io/Claude-Code-on-WhatsApp/"><img src="https://img.shields.io/badge/▶_Live_Demo-Interactive_Presentation-26a69a?style=for-the-badge&logoColor=white" alt="Live Demo"></a>
   <a href="INSTALL.md"><img src="https://img.shields.io/badge/📥_One_Click_Install-Windows_|_Mac_|_Linux_|_Termux-0f1522?style=for-the-badge" alt="Install"></a>
   <a href="https://github.com/ghanibot/Claude-Code-on-WhatsApp/releases/latest"><img src="https://img.shields.io/github/v/release/ghanibot/Claude-Code-on-WhatsApp?style=for-the-badge&color=ffa726" alt="Latest Release"></a>
+[![SafeSkill 69/100](https://img.shields.io/badge/SafeSkill-69%2F100_Use%20with%20Caution-orange)](https://safeskill.dev/scan/ghanibot-claude-code-on-whatsapp)
 </p>
 
 <p align="center">
